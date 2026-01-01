@@ -1,11 +1,9 @@
 # Belgium-electricity-import-inference-engine
-A method and tool to infer the make-up of Belgian electricity imports
-
-
-## What Does Belgium Really Import?
-
+A method to infer the make-up of Belgian electricity imports
 
 ## Motivation
+**What Does Belgium Really Import?**
+
 Belgium is structurally interconnected with its neighbours and frequently imports electricity. Headlines often state that *“Belgium imports electricity from France, the Netherlands or Germany”*, but they rarely clarify **what kind of electricity** this actually is. Is Belgium importing:
 -	nuclear electricity from France?
 -	gas-fired electricity from the Netherlands?
@@ -35,10 +33,67 @@ When demand in one country increases, exports are supplied by the power plants i
 - enable exports,
 - and are relevant for questions about imports and dependency.
 
-Identifying these marginal technologies is therefore essential to understand which types of generation are actually activated by imports. This is not trivial.
+Identifying these marginal technologies is therefore essential to understand which types of generation are actually activated by imports. This is not trivial. I designed a method that tries to detect ramping (which powerplants increase output when demand increases), with a wholesale price-based inference as fallback.
 
 
 #### Step 1a — Ramping-Based Detection
+
+At each quarter hour, generation by technology is observed. The marginal technology is approximated as the technology that increases output when demand rises.
+
+Formally, for technology 
+i
+i:
+
+ΔGi(t)=Gi(t)−Gi(t−1)
+ΔG
+i
+	​
+
+(t)=G
+i
+	​
+
+(t)−G
+i
+	​
+
+(t−1)
+
+Only positive changes are considered:
+
+ΔGi+(t)=max⁡(ΔGi(t),0)
+ΔG
+i
++
+	​
+
+(t)=max(ΔG
+i
+	​
+
+(t),0)
+
+The technology with the largest significant 
+ΔGi+
+ΔG
+i
++
+	​
+
+, subject to eligibility rules, is considered marginal.
+
+Why eligibility rules are needed
+
+Not all technologies behave equally:
+- wind and solar fluctuate exogenously,
+- nuclear is usually inframarginal even if it ramps,
+- storage responds strongly but only in high-price regimes,
+- hydro reservoirs are dispatched strategically in some countries.
+
+The methodology therefore applies country-specific rules, reflecting well-known market characteristics:
+- France: strategic reservoir hydro, nuclear baseload
+- UK & Netherlands: gas-dominated marginality
+- Germany: regime switching between lignite, coal, and gas
 
 At quarter-hourly resolution, marginal behaviour is proxied by changes in output.
 
