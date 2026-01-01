@@ -17,7 +17,7 @@ Belgium is structurally interconnected with its neighbours and frequently import
 
 Answering this question is not trivial. Electricity flows are simultaneous, bidirectional, and shaped by market coupling across Europe. Belgium is not only an importer, but also regularly a transit country, with power flowing through its grid between neighbouring zones.
 
-On social media, many people have strong opinions on these types of news articles or the make-up of these import flows, without actually having any clue on how they are *actually* made up. I wanted to get some real numbers, so I started coding. The goal of this little project is not to reconstruct the European market dispatch in detail, but to make a transparent, defensible attempt to answer a simpler but policy-relevant question: *What does the electricity Belgium imports from its neighbouring countries most likely consist of?*
+On social media, many people have strong opinions on these types of news articles or the make-up of these import flows, without actually having any clue on how they are *actually* made up. I wanted to get some real numbers, so I started crunching some data. The goal of this little project is not to reconstruct the European market dispatch in detail, but to make a transparent, defensible attempt to answer a simpler but policy-relevant question: *What does the electricity Belgium imports from its neighbouring countries most likely consist of?*
 
 ## About the author
 
