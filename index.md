@@ -19,6 +19,18 @@ Answering this question is not trivial. Electricity flows are simultaneous, bidi
 
 On social media, many people have strong opinions on these types of news articles or the make-up of these import flows, without actually having any clue on how they are *actually* made up. I wanted to get some real numbers, so I started coding. The goal of this little project is not to reconstruct the European market dispatch in detail, but to make a transparent, defensible attempt to answer a simpler but policy-relevant question: *What does the electricity Belgium imports from its neighbouring countries most likely consist of?*
 
+## About the author
+
+I am a postdoctoral researcher at the **Energy & Systems Lab** of **Ghent University**, working on electricity systems, markets, and energy policy analysis.  
+This repository reflects my interest in transparent, data-driven approaches to understanding power system behaviour.
+
+You can find more of my work or get in touch via:
+- [GitHub](https://github.com/Epyon01P)
+- [Twitter](https://twitter.com/Laveyne_J)
+- [Bluesky](https://bsky.app/profile/jolaveyne.bsky.social)
+
+Feel free to reach out through any of these channels if you are interested in my data analysis or research activities.
+
 ## Why the Import Mix Must Be Inferred
 
 Electricity markets differ fundamentally from other commodity trade. Electricity imports:
