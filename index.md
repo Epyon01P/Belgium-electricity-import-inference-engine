@@ -9,7 +9,7 @@ A method to infer the make-up of Belgian electricity imports
 ## Motivation
 **What Does Belgium Really Import?**
 
-Belgium is structurally interconnected with its neighbours and frequently imports electricity. Headlines often state that *“Belgium imports electricity from France, the Netherlands or Germany”*, but they rarely clarify **what kind of electricity** this actually is. Is Belgium importing:
+Belgium is structurally interconnected with its neighbours and frequently imports electricity. Headlines often state that *“Belgium imports record amounts of electricity”*, but they do not clarify **what kind of electricity** this actually is. Is Belgium importing:
 -	nuclear electricity from France?
 -	gas-fired electricity from the Netherlands?
 -	coal-fired electricity from Germany?
@@ -17,7 +17,7 @@ Belgium is structurally interconnected with its neighbours and frequently import
 
 Answering this question is not trivial. Electricity flows are simultaneous, bidirectional, and shaped by market coupling across Europe. Belgium is not only an importer, but also regularly a transit country, with power flowing through its grid between neighbouring zones.
 
-On social media, many people have strong opinions on the make-up of these import flows, without actually having any clue on how they are *actually* made up. I wanted to get some real numbers, so I started coding. The goal of this little project is not to reconstruct the European market dispatch in detail, but to make a transparent, defensible attempt to answer a simpler but policy-relevant question: *What does the electricity Belgium relies on from abroad most likely consist of?*
+On social media, many people have strong opinions on these types of news articles or the make-up of these import flows, without actually having any clue on how they are *actually* made up. I wanted to get some real numbers, so I started coding. The goal of this little project is not to reconstruct the European market dispatch in detail, but to make a transparent, defensible attempt to answer a simpler but policy-relevant question: *What does the electricity Belgium imports from its neighbouring countries most likely consist of?*
 
 ## Why the Import Mix Must Be Inferred
 
@@ -26,7 +26,7 @@ Electricity markets differ fundamentally from other commodity trade. Electricity
 -	flows may enter Belgium and leave again immediately,
 -	generation in neighbouring countries may be driven by demand elsewhere.
 
-Reconstructing true dispatch would require full bid stacks, Euphemia, flow-based constraints, and counterfactual simulations — none of which are publicly available. This means there is no single **“correct”** import mix. Any answer must be an inference, based on assumptions. The objective is therefore **approximation**, not reconstruction. Below I discuss the methodlogical framework/pipeline I created for this.
+Reconstructing true dispatch would require full bid stacks, Euphemia, flow-based constraints, and counterfactual simulations, none of which are publicly available. This means there is no single **“correct”** import mix. Any answer must be an inference, based on assumptions. The objective is therefore **approximation**, not reconstruction. Below I discuss the methodlogical framework/pipeline I created for this.
 
 ### Step 1 — Inferring Marginal Technologies per Country
 A country does not import the *average* electricity mix of another country. When electricity demand changes, not all power plants respond equally:
@@ -38,12 +38,11 @@ When demand in one country increases, exports are supplied by the power plants i
 - enable exports,
 - and are relevant for questions about imports and dependency.
 
-Identifying these marginal technologies is therefore essential to understand which types of generation are actually activated by imports. This is not trivial. I designed a method that tries to detect ramping (which powerplants increase output when demand increases), with a wholesale price-based inference as fallback.
-
+Identifying these marginal technologies is therefore essential to understand which types of generation are actually activated by imports. This is not trivial. I designed a method that tries to detect this based on ramping behaviour ("*which powerplants increase output when demand increases?*"), with a wholesale price-based inference as fallback.
 
 #### Step 1a — Ramping-Based Detection
 
-At each quarter hour, generation by technology is observed. The marginal technology is approximated as the technology that increases output when demand rises.
+At each quarter hour, (changes in) generation by the different power plant technologies is observed. The marginal technology is approximated as the technology that increases output when demand rises.
 
 For technology *i*, the change in output between two consecutive quarter-hours is defined as:
 
@@ -76,7 +75,7 @@ Therefore, country-specific eligibility rules are applied:
 - UK & Netherlands: gas-dominated marginality
 - Germany: regime switching between lignite, coal, and gas
 
-The result of this step is a detected marginal technology for each country and quarter hour — when such detection is possible. See the per-country assumptions below.
+The result of this step is a detected marginal technology for each country and quarter hour when such detection is possible. See the per-country assumptions below.
 
 #### Step 1b — Price-Imputed Fallback
 In many intervals:
@@ -84,8 +83,7 @@ In many intervals:
 - multiple technologies move slightly,
 - or the marginal unit is already running and does not ramp visibly.
 
-In these cases, ramp-based detection alone is insufficient, and I inferr marginality from **price regimes**. Prices are grouped into low, mid, high, and scarcity regimes. For each regime and country, a plausible marginal ordering is defined based on cost structures and historical dispatch behaviour. See assumptions below. This fallback is used **only when ramp-based detection yields no clear result**.
-
+In these cases, ramp-based detection alone is insufficient, and I inferr marginality from **price regimes**. Prices are grouped, per country, into low, mid, high, and scarcity regimes. For each regime and country, a plausible merit order is defined based on cost structures and historical dispatch behaviour. See assumptions below. This fallback is used **only when ramp-based detection yields no clear result**.
 
 ### Step 2 — Constructing an Inferred Marginal Stack
 Export volumes frequently exceed the ramp of a single technology. Therefore, a **marginal stack** is constructed:
@@ -96,7 +94,7 @@ This stack acts as a **proxy merit order** (or a reverse one, if you will), infe
 
 ### Step 3 — Allocating Cross-Border Exports
 
-Exports to Belgium are allocated sequentially across the marginal stack until fully attributed. Any residual is recorded explicitly. In laymans terms: if the observed export from Country A to Belgium cannot be supplied by the detected marginal technology in country A, the second-to-marginal tech is used, then the third etc.
+At each quarter hour, exports to Belgium (if present) are allocated sequentially across the marginal stack of each country until the observed physical flow (export) volume is fully attributed. In laymans terms: if the observed export from Country A to Belgium cannot be supplied by the detected marginal technology in country A, the second-to-marginal tech is used, then the third etc.
 
 ### Step 4 — Net Imports and Transit
 
@@ -126,13 +124,15 @@ Two metrics are reported:
 This metric:
 - weights neighbouring countries’ inferred export mixes,
 - scales them to Belgium’s net import volume,
-- makes no claim about causality (*which country initiated the export, Belgium or a country Belgium is exporting to?.*)
+- makes no claim about causality ("*which country initiated the export, Belgium or a country Belgium is exporting to?*")
 
 It is an accounting view using marginal-stack attribution.
 
 #### Metric 2 — Marginal Import Attribution (Causal Proxy)
 
 *Which technologies were most likely activated because Belgium was a sink, not a transit zone?*
+
+Belgium is a transit zone. This means import to Belgium (and ramping up of a marginal tech in the exporting country) could be triggered by import from Belgium by another country. E.g. a gas plant in France could be starting up to provide import to Belgium, but in reality it is because of increasing demand in Germany with Belgium just being used as passthrough. 
 
 To account for Belgium’s role as a transit country, a simple transit indicator is defined as:
 
@@ -146,8 +146,7 @@ $$
 }
 $$
 
-This ratio approaches 1 when imports and exports are similar (transit-dominated),
-and approaches 0 when Belgium is clearly a net sink or source.
+This ratio approaches 1 when imports and exports are similar (transit-dominated), and approaches 0 when Belgium is clearly a net sink or source.
 
 A causal weight is then derived as:
 
@@ -157,7 +156,7 @@ $$
 
 Metric 1 is multiplied by this weight to downweight transit-heavy intervals.
 
-This metric is explicitly labelled a causal proxy, not a counterfactual result.
+What I try to do here is *assign causality* to import. But this is very tricky to do with the limited public data at my disposal. This metric is therefore explicitly labelled a **proxy for causality**, not a counterfactual result.
 
 ## Assumptions
 ### General Technology Classifications
