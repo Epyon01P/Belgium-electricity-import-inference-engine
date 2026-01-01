@@ -40,63 +40,6 @@ Identifying these marginal technologies is therefore essential to understand whi
 
 At each quarter hour, generation by technology is observed. The marginal technology is approximated as the technology that increases output when demand rises.
 
-Formally, for technology 
-i
-i:
-
-ΔGi(t)=Gi(t)−Gi(t−1)
-ΔG
-i
-	​
-
-(t)=G
-i
-	​
-
-(t)−G
-i
-	​
-
-(t−1)
-
-Only positive changes are considered:
-
-ΔGi+(t)=max⁡(ΔGi(t),0)
-ΔG
-i
-+
-	​
-
-(t)=max(ΔG
-i
-	​
-
-(t),0)
-
-The technology with the largest significant 
-ΔGi+
-ΔG
-i
-+
-	​
-
-, subject to eligibility rules, is considered marginal.
-
-Why eligibility rules are needed
-
-Not all technologies behave equally:
-- wind and solar fluctuate exogenously,
-- nuclear is usually inframarginal even if it ramps,
-- storage responds strongly but only in high-price regimes,
-- hydro reservoirs are dispatched strategically in some countries.
-
-The methodology therefore applies country-specific rules, reflecting well-known market characteristics:
-- France: strategic reservoir hydro, nuclear baseload
-- UK & Netherlands: gas-dominated marginality
-- Germany: regime switching between lignite, coal, and gas
-
-At quarter-hourly resolution, marginal behaviour is proxied by changes in output.
-
 For technology i:
 
 ΔGᵢ(t) = Gᵢ(t) − Gᵢ(t−1)
@@ -105,29 +48,143 @@ Only positive ramps are considered:
 
 ΔGᵢ⁺(t) = max(ΔGᵢ(t), 0)
 
-Technologies with the largest significant positive ramps are candidates for marginality.
+Technologies with the largest significant positive ramps are candidates for marginality. Small fluctuations are filtered using minimum ramp thresholds to avoid noise.​
 
-Small fluctuations are filtered using minimum ramp thresholds to avoid noise.
+The intuition is simple:
+- technologies that increase output are responding to additional demand,
+- technologies that do not change output are inframarginal at that moment.
 
-#### Step 1b — Eligibility Rules
+**Eligibility rules**
 
-Not all ramping technologies are economically marginal:
-- wind and solar move exogenously,
-- nuclear often ramps but remains inframarginal,
-- storage responds strongly but only under certain price conditions.
+Not all technologies should be treated equally, even if they ramp:
+- Wind and solar ramp due to weather, not market demand.
+- Nuclear may ramp, but usually remains inframarginal and price-insensitive.
+- Storage can ramp sharply but only in specific price regimes.
+- Hydro reservoirs can be dispatched strategically.
 
-Eligibility rules are applied per country, reflecting known system characteristics:
-- France: strategic reservoir hydro, nuclear baseload
+Therefore, country-specific eligibility rules are applied:
+- France: special treatment of reservoir hydro and nuclear
 - UK & Netherlands: gas-dominated marginality
-- Germany: lignite/coal/gas regime switching
+- Germany: regime switching between lignite, coal, and gas
 
-#### Step 1c — Price-Imputed Fallback
+The result of this step is a detected marginal technology for each country and quarter hour — when such detection is possible.
 
-In many intervals, ramps are too small or ambiguous. When ramp-based detection fails, marginality is inferred from **price regimes**.
+#### Step 1b — Price-Imputed Fallback
+In many intervals:
+- generation is relatively flat,
+- multiple technologies move slightly,
+- or the marginal unit is already running and does not ramp visibly.
 
-Prices are grouped into low, mid, high, and scarcity regimes. For each regime and country, a plausible marginal ordering is defined based on cost structures and historical dispatch behaviour.
+In these cases, ramp-based detection alone is insufficient, and I inferr marginality from **price regimes**. Prices are grouped into low, mid, high, and scarcity regimes. For each regime and country, a plausible marginal ordering is defined based on cost structures and historical dispatch behaviour. This fallback is used **only when ramp-based detection yields no clear result**.
 
-Crucially, this fallback is used **only when ramp-based detection yields no clear result**.
+### Per country summary
+To apply the two-step method described above, I used the following per-country assumptions:
+
+### General Technology Classifications
+
+**Non-Dispatchable / Exogenous** (excluded from candidates):
+- Wind Onshore, Wind Offshore, Solar
+- Hydro Run-of-river and pondage, Marine
+- Other renewable, Geothermal
+
+**Typically Inframarginal**:
+- Nuclear (country-specific gating)
+
+**Dispatchable Candidates**:
+- Hydro Water Reservoir, Hydro Pumped Storage
+- Fossil Gas, Fossil Hard coal, Fossil Brown coal/Lignite
+- Fossil Coal-derived gas, Fossil Oil, Fossil Oil shale, Fossil Peat
+- Biomass, Waste, Energy storage, Other
+
+## Country-Specific Logic
+
+### France (FR)
+
+**Market Characteristics:**
+- Strategic reservoir hydro dispatch based on opportunity cost
+- Large nuclear baseload (typically inframarginal)
+- Storage arbitrage in scarcity periods
+
+**Detection Logic:**
+- **Storage eligibility**: Only in high-price (P >= P70) or scarcity (P >= P90) regimes
+- **Hydro preference**: In high-price hours, prefer Hydro Water Reservoir if its ramp is within 10% of top dispatchable ramp
+- **Nuclear gating**: Strict - only if:
+  - Nuclear is largest ramp among ALL techs
+  - No eligible dispatchable exceeds 50% of nuclear ramp (2.0× rule)
+  - Not in scarcity period
+- **Storage in scarcity**: Prefer storage if it has largest ramp
+
+**Price-Regime Imputation Fallback:**
+- **Scarcity (P >= P90)**: Storage (if online) → Gas → Reservoir → Coal → Nuclear
+- **High (P70-P90)**: Reservoir → Gas → Coal → Nuclear
+- **Low (P <= P30)**: Nuclear (imputed inframarginal baseline)
+- **Mid (P30-P70)**: Gas → Reservoir → Coal → Nuclear
+
+**Rationale**: Reservoir hydro is strategically dispatched in high-price hours; nuclear is almost never marginal.
+
+### United Kingdom (GB)
+
+**Market Characteristics:**
+- Gas-dominated marginality
+- Little strategic reservoir hydro
+- Simpler merit-order proxy works better
+
+**Detection Logic:**
+- **Storage eligibility**: Only in high/scarcity price regimes
+- **No hydro preference**: Treat Hydro Water Reservoir as normal dispatchable (rare)
+- **Nuclear gating**: Very strict (even stricter than FR) - only if no eligible dispatchable exceeds 30% of nuclear ramp
+- **Gas primary**: Fossil Gas is primary marginal candidate
+
+**Price-Regime Imputation Fallback:**
+- **Scarcity (P >= P90)**: Gas → Storage → Oil → Coal → Other
+- **High (P70-P90)**: Gas → Storage → Coal → Other
+- **Low (P <= P30)**: Gas → Nuclear (if present) → Other
+- **Mid (P30-P70)**: Gas → Other
+
+**Rationale**: UK price formation dominated by gas/peakers rather than reservoir hydro.
+
+### Netherlands (NL)
+
+**Market Characteristics:**
+- Gas-dominated, similar to UK
+- CHP/"Other" may exist but keep simple
+- Marginality is stable and usually gas
+
+**Detection Logic:**
+- **Storage eligibility**: Only in high/scarcity price regimes
+- **No hydro preference**: No special hydro handling
+- **Nuclear gating**: Very strict (if nuclear present)
+- **Gas primary**: Fossil Gas is primary marginal candidate
+
+**Price-Regime Imputation Fallback:**
+- **Scarcity (P >= P90)**: Gas → Storage → Oil → Coal → Other
+- **High (P70-P90)**: Gas → Coal → Other
+- **Low (P <= P30)**: Gas → Other (do not force nuclear if NL doesn't have it)
+- **Mid (P30-P70)**: Gas → Other
+
+**Rationale**: Marginality is stable and usually gas; simpler than Germany/France.
+
+### Germany (DE)
+
+**Market Characteristics:**
+- Multiple marginal regimes (lignite/coal/gas)
+- Strong RES swings
+- Dynamic switching between coal and gas
+- Nuclear absent
+
+**Detection Logic:**
+- **Storage eligibility**: Only in high/scarcity price regimes
+- **No hydro preference**: No France-style reservoir preference
+- **Nuclear gating**: None (nuclear not present)
+- **Coal/lignite priority**: Lignite and hard coal can be marginal in mid/low price regimes
+
+**Price-Regime Imputation Fallback:**
+- **Scarcity (P >= P90)**: Gas → Storage → Oil → Hard coal → Lignite → Other
+- **High (P70-P90)**: Gas → Hard coal → Lignite → Other
+- **Mid (P30-P70)**: Hard coal → Lignite → Gas → Other
+- **Low (P <= P30)**: Lignite → Hard coal → Other
+
+**Rationale**: Germany often has coal/lignite on the margin in mid/low price regimes; gas tends to dominate high/scarcity.
 
 ### Step 2 — Constructing an Inferred Marginal Stack
 Export volumes frequently exceed the ramp of a single technology. Therefore, a **marginal stack** is constructed:
