@@ -1,6 +1,5 @@
 ---
 layout: default
-title: Belgium electricity import mix – methodology
 ---
 
 # Belgium-electricity-import-inference-engine
